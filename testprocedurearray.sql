@@ -2,20 +2,26 @@ set timing on;
 set serveroutput on;
 DECLARE
 
-    CURSOR USER_IDS_CURSOR( pInterval NUMBER ) IS SELECT * FROM ((SELECT DISTINCT  USER_ID 
-    FROM REVIEW R
-    WHERE R.ROLE = 'SELLER'
-    AND TRUNC(MODIFIED) >= ( SYSDATE - pInterval ) 
-    )
-    UNION
-    (SELECT USER_ID
-    FROM SCORE
-    WHERE TRUNC(MODIFIED) >= ( SYSDATE - 7 ))) P ORDER BY P.USER_ID;
+    CURSOR USER_IDS_CURSOR( pInterval NUMBER ) IS 
+        SELECT DISTINCT(USER_ID) FROM 
+            (
+                (SELECT DISTINCT  USER_ID 
+                FROM REVIEW R
+                WHERE R.ROLE = 'SELLER'
+                AND TRUNC(MODIFIED) >= ( SYSDATE - pInterval ))
+            UNION
+                (SELECT USER_ID
+                FROM SCORE
+                WHERE TRUNC(MODIFIED) >= ( SYSDATE - 7 ))
+            ) 
+        P ORDER BY P.USER_ID;
     
-    CURSOR REP_CURSOR IS SELECT R.USER_ID, R.CREATED, R.SCORE
-    FROM REVIEW R WHERE
-    R.ROLE = 'SELLER'
-    AND R.STATUS = 'PUBLISHED';
+    CURSOR REP_CURSOR IS 
+        SELECT R.USER_ID, R.CREATED, R.SCORE
+        FROM REVIEW R WHERE
+        R.ROLE = 'SELLER'
+        AND R.STATUS = 'PUBLISHED'
+        ORDER BY R.USER_ID;
     
     
     TYPE idx_table IS TABLE OF PLS_INTEGER INDEX BY PLS_INTEGER;
@@ -38,102 +44,112 @@ DECLARE
     
     do boolean;
     
+    abrt boolean;
+    
     tmp PLS_INTEGER;
     
-    k PLS_INTEGER;
     
 BEGIN
-    k := 0;
     OPEN USER_IDS_CURSOR(50);
-    
     OPEN REP_CURSOR;
     
     
+       
+    abrt := false;
+        
+    FETCH USER_IDS_CURSOR INTO idx;
+    if USER_IDS_CURSOR%NOTFOUND then 
+        return;
+    end if;
+    
+    v7positive(idx.USER_ID) := 0;
+    v7negative(idx.USER_ID) := 0;
+    v7neutral(idx.USER_ID) := 0;
+    v30positive(idx.USER_ID) := 0;
+    v30negative(idx.USER_ID) := 0;
+    v30neutral(idx.USER_ID) := 0;
+    v180positive(idx.USER_ID) := 0;
+    v180negative(idx.USER_ID) := 0;
+    v180neutral(idx.USER_ID) := 0;
+        
     LOOP
-    
-        do := false;
         
-        FETCH USER_IDS_CURSOR INTO idx;
-        k := k+1;
-        EXIT WHEN USER_IDS_CURSOR%NOTFOUND;
+
+        FETCH REP_CURSOR INTO repx;
+        EXIT WHEN REP_CURSOR%NOTFOUND;
         
-        v7positive(idx.USER_ID) := 0;
-        v7negative(idx.USER_ID) := 0;
-        v7neutral(idx.USER_ID) := 0;
-        v30positive(idx.USER_ID) := 0;
-        v30negative(idx.USER_ID) := 0;
-        v30neutral(idx.USER_ID) := 0;
-        v180positive(idx.USER_ID) := 0;
-        v180negative(idx.USER_ID) := 0;
-        v180neutral(idx.USER_ID) := 0;
-        
-        LOOP
-            
-            if do THEN
-                do := false;
-                goto label;
-            else
-                FETCH REP_CURSOR INTO repx;
-                do := true;
-                EXIT WHEN REP_CURSOR%NOTFOUND OR repx.USER_ID != idx.USER_ID;
-                do := false;
+        if repx.USER_ID != idx.USER_ID then 
+            while not USER_IDS_CURSOR%NOTFOUND and repx.USER_ID != idx.USER_ID and idx.USER_ID < repx.USER_ID loop
+                FETCH USER_IDS_CURSOR INTO idx;
+            end loop;
+            EXIT WHEN USER_IDS_CURSOR%NOTFOUND;
+            IF idx.USER_ID < repx.USER_ID then
+                continue;
             end if;
             
-            <<label>>
-            
-            if repx.SCORE = 'POSITIVE' then
-                if repx.CREATED > SYSDATE - 7 then
-                    tmp := v7positive(repx.USER_ID);
-                    tmp := tmp+1;
-                    v7positive(repx.USER_ID) := tmp;
-                end if;
-                if repx.CREATED > SYSDATE - 30 then
-                    tmp := v30positive(repx.USER_ID);
-                    tmp := tmp+1;
-                    v30positive(repx.USER_ID) := tmp;
-                end if;
-                if repx.CREATED > SYSDATE - 180 then
-                    tmp := v180positive(repx.USER_ID);
-                    tmp := tmp+1;
-                    v180positive(repx.USER_ID) := tmp;
-                end if;
-            elsif repx.SCORE = 'NEGATIVE' then
-                if repx.CREATED > SYSDATE - 7 then
-                    tmp := v7negative(repx.USER_ID);
-                    tmp := tmp+1;
-                    v7negative(repx.USER_ID) := tmp;
-                end if;
-                if repx.CREATED > SYSDATE - 30 then
-                    tmp := v30negative(repx.USER_ID);
-                    tmp := tmp+1;
-                    v30negative(repx.USER_ID) := tmp;
-                end if;
-                if repx.CREATED > SYSDATE - 180 then
-                    tmp := v180negative(repx.USER_ID);
-                    tmp := tmp+1;
-                    v180negative(repx.USER_ID) := tmp;
-                end if;
-            else
-                if repx.CREATED > SYSDATE - 7 then
-                    tmp := v7neutral(repx.USER_ID);
-                    tmp := tmp+1;
-                    v7neutral(repx.USER_ID) := tmp;
-                end if;
-                if repx.CREATED > SYSDATE - 30 then
-                    tmp := v30neutral(repx.USER_ID);
-                    tmp := tmp+1;
-                    v30neutral(repx.USER_ID) := tmp;
-                end if;
-                if repx.CREATED > SYSDATE - 180 then
-                    tmp := v180neutral(repx.USER_ID);
-                    tmp := tmp+1;
-                    v180neutral(repx.USER_ID) := tmp;
-                end if;
+            v7positive(idx.USER_ID) := 0;
+            v7negative(idx.USER_ID) := 0;
+            v7neutral(idx.USER_ID) := 0;
+            v30positive(idx.USER_ID) := 0;
+            v30negative(idx.USER_ID) := 0;
+            v30neutral(idx.USER_ID) := 0;
+            v180positive(idx.USER_ID) := 0;
+            v180negative(idx.USER_ID) := 0;
+            v180neutral(idx.USER_ID) := 0;
+        
+        end if;
+        
+        if repx.SCORE = 'POSITIVE' then
+            if TRUNC(repx.CREATED) > SYSDATE - 7 then
+                tmp := v7positive(repx.USER_ID);
+                tmp := tmp+1;
+                v7positive(repx.USER_ID) := tmp;
             end if;
-        END LOOP;
-   END LOOP;
-   dbms_output.put_line(k);
-    
+            if TRUNC(repx.CREATED) > SYSDATE - 30 then
+                tmp := v30positive(repx.USER_ID);
+                tmp := tmp+1;
+                v30positive(repx.USER_ID) := tmp;
+            end if;
+            if TRUNC(repx.CREATED) > SYSDATE - 180 then
+                tmp := v180positive(repx.USER_ID);
+                tmp := tmp+1;
+                v180positive(repx.USER_ID) := tmp;
+            end if;
+        elsif repx.SCORE = 'NEGATIVE' then
+            if TRUNC(repx.CREATED) > SYSDATE - 7 then
+                tmp := v7negative(repx.USER_ID);
+                tmp := tmp+1;
+                v7negative(repx.USER_ID) := tmp;
+            end if;
+            if TRUNC(repx.CREATED) > SYSDATE - 30 then
+                tmp := v30negative(repx.USER_ID);
+                tmp := tmp+1;
+                v30negative(repx.USER_ID) := tmp;
+            end if;
+            if TRUNC(repx.CREATED) > SYSDATE - 180 then
+                tmp := v180negative(repx.USER_ID);
+                tmp := tmp+1;
+                v180negative(repx.USER_ID) := tmp;
+            end if;
+        else
+            if TRUNC(repx.CREATED) > SYSDATE - 7 then
+                tmp := v7neutral(repx.USER_ID);
+                tmp := tmp+1;
+                v7neutral(repx.USER_ID) := tmp;
+            end if;
+            if TRUNC(repx.CREATED) > SYSDATE - 30 then
+                tmp := v30neutral(repx.USER_ID);
+                tmp := tmp+1;
+                v30neutral(repx.USER_ID) := tmp;
+            end if;
+            if TRUNC(repx.CREATED) > SYSDATE - 180 then
+                tmp := v180neutral(repx.USER_ID);
+                tmp := tmp+1;
+                v180neutral(repx.USER_ID) := tmp;
+            end if;
+        end if;
+    END LOOP;
+    dbms_output.put_line(v180neutral(398));
 END;
 
 
