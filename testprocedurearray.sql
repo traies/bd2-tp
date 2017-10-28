@@ -24,7 +24,7 @@ DECLARE
         ORDER BY R.USER_ID;
     
     
-    TYPE idx_table IS TABLE OF NUMBER(10) INDEX BY PLS_INTEGER;
+    TYPE idx_table IS TABLE OF NUMBER INDEX BY PLS_INTEGER;
     
     v7positive idx_table;
     v7negative idx_table;
@@ -143,6 +143,22 @@ BEGIN
     CLOSE USER_IDS_CURSOR;
     CLOSE REP_CURSOR;
     
+    OPEN USER_IDS_CURSOR(50);
+    
+    LOOP
+        FETCH USER_IDS_CURSOR INTO idx;
+        EXIT WHEN USER_IDS_CURSOR%NOTFOUND;
+        if (vCountTotal.exists(idx.USER_ID)) then
+            SCORING_PKG.update_seller_scoring(idx.USER_ID, 
+              v7Positive(idx.USER_ID), v7Negative(idx.USER_ID), v7Neutral(idx.USER_ID),
+              v30Positive(idx.USER_ID), v30Negative(idx.USER_ID), v30Neutral(idx.USER_ID),
+              v180Positive(idx.USER_ID), v180Negative(idx.USER_ID), v180Neutral(idx.USER_ID),
+              vScoreTotal(idx.USER_ID), vCountTotal(idx.USER_ID));
+        else
+            SCORING_PKG.update_seller_scoring(idx.USER_ID, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        end if;
+    
+    END LOOP;
     
 END;
 
