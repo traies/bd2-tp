@@ -72,8 +72,12 @@ BEGIN
         FETCH REP_CURSOR INTO repx;
         EXIT WHEN REP_CURSOR%NOTFOUND;
         
-        if repx.USER_ID != idx.USER_ID then 
-            while not USER_IDS_CURSOR%NOTFOUND and repx.USER_ID != idx.USER_ID and idx.USER_ID < repx.USER_ID loop
+        if repx.USER_ID < idx.USER_ID then
+            continue;
+        end if;
+        
+        if repx.USER_ID > idx.USER_ID then 
+            while not USER_IDS_CURSOR%NOTFOUND and idx.USER_ID < repx.USER_ID loop
                 FETCH USER_IDS_CURSOR INTO idx;
                 if not USER_IDS_CURSOR%NOTFOUND then 
                     v7positive(idx.USER_ID) := 0;
@@ -93,7 +97,6 @@ BEGIN
             IF idx.USER_ID < repx.USER_ID then
                 continue;
             end if;
-        
         end if;
         
         vCountTotal(idx.USER_ID) := vCountTotal(idx.USER_ID) + 1;
