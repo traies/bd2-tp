@@ -1,0 +1,12 @@
+TIMING:
+
+1)
+	SET TIMING ON;
+	BEGIN SCORING_PKG.calculate_seller_scoring(360);
+	END;
+
+	ANTES:						Elapsed: 00:00:02.761
+	Con nuevo procedure:		Elapsed: 00:00:00.954
+	Con REVIEW_CREATED_INDEX:	Elapsed: 00:00:00.825
+
+2)
